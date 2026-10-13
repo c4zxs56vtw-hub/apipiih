@@ -1,0 +1,1246 @@
+﻿openapi: 3.0.3
+info:
+  title: C'Kennedy - Contrat REST backend Spring Boot
+  version: 1.0.0
+  description: 'Contrat des routes attendues par le frontend React. P0 : actif cÃ´tÃ© front ; P1 : optionnel
+    ; P2 : extensions frontend/backend. Tous les messages d''erreur doivent Ãªtre en franÃ§ais, sous la
+    forme {message, field?}. Login incorrect -> HTTP 400 et non HTTP 401.'
+servers:
+- url: http://localhost:8080
+  description: DÃ©veloppement (exemple)
+tags:
+- name: P0 - Authentification
+  description: Login et inscription
+- name: P0 - Produits
+  description: Catalogue public et administration
+- name: P0 - Lookbook
+  description: Lookbook public et administration
+- name: P0 - Upload
+  description: Upload images limitÃ© Ã  5 Mo
+- name: P1 - Hero
+  description: 'Optionnel : interface prÃ©sente mais non raccordÃ©e'
+- name: P2 - Commandes
+  description: Extension non intÃ©grÃ©e au frontend actuel
+- name: P2 - Newsletter
+  description: Extension non intÃ©grÃ©e au frontend actuel
+- name: P2 - ParamÃ¨tres
+  description: Extension non intÃ©grÃ©e au frontend actuel
+paths:
+  /api/auth/login:
+    post:
+      tags:
+      - P0 - Authentification
+      operationId: login
+      summary: Connexion JWT
+      description: Un mot de passe erronÃ© doit renvoyer HTTP 400 et NON HTTP 401.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion rÃ©ussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/auth/register:
+    post:
+      tags:
+      - P0 - Authentification
+      operationId: register
+      summary: Inscription client
+      description: CrÃ©er uniquement un compte CLIENT et retourner un JWT.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Compte crÃ©Ã© et connectÃ©
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/products:
+    get:
+      tags:
+      - P0 - Produits
+      operationId: listProducts
+      summary: Lister les produits
+      description: 'Sans JWT ADMIN : seulement les produits publiÃ©s. Avec JWT ADMIN validÃ© : tous, y compris
+        brouillons. ?admin=true ne confÃ¨re aucun privilÃ¨ge sans JWT ADMIN.'
+      security: &id001
+      - {}
+      - bearerAuth: []
+      parameters:
+      - name: admin
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: Si true, exiger le rÃ´le ADMIN pour inclure les brouillons.
+      responses:
+        '200':
+          description: Tableau de produits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - P0 - Produits
+      operationId: createProduct
+      summary: CrÃ©er un produit (ADMIN)
+      security: &id002
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreateRequest'
+      responses:
+        '201':
+          description: Produit crÃ©Ã©
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/products/trending:
+    get:
+      tags:
+      - P0 - Produits
+      operationId: getTrendingProducts
+      summary: Lister les produits tendance
+      description: Uniquement les produits publiÃ©s ; tri likesCount dÃ©croissant.
+      security: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 4
+          minimum: 1
+      responses:
+        '200':
+          description: Produits populaires
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/products/{id}:
+    get:
+      tags:
+      - P0 - Produits
+      operationId: getProductById
+      summary: Lire un produit
+      description: 'Produit non publiÃ© : 404 pour public/CLIENT. ADMIN peut consulter un brouillon.'
+      security: *id001
+      parameters:
+      - &id003
+        name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Identifiant gÃ©nÃ©rÃ© par le backend.
+      responses:
+        '200':
+          description: Produit trouvÃ©
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - P0 - Produits
+      operationId: updateProduct
+      summary: Modifier complÃ¨tement ou partiellement un produit (ADMIN)
+      description: Une propriÃ©tÃ© absente ne change pas ; le champ id Ã©ventuellement prÃ©sent dans le corps
+        est ignorÃ©.
+      security: *id002
+      parameters:
+      - *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdateRequest'
+      responses:
+        '200':
+          description: Produit modifiÃ©
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400': &id004
+          $ref: '#/components/responses/BadRequest'
+        '401': &id005
+          $ref: '#/components/responses/Unauthorized'
+        '403': &id006
+          $ref: '#/components/responses/Forbidden'
+        '404': &id007
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - P0 - Produits
+      operationId: deleteProduct
+      summary: Supprimer un produit (ADMIN)
+      description: Retirer ses rÃ©fÃ©rences des looks.
+      security: *id002
+      parameters:
+      - *id003
+      responses:
+        '204':
+          description: Produit supprimÃ©, sans corps
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/products/{id}/like:
+    post:
+      tags:
+      - P0 - Produits
+      operationId: likeProduct
+      summary: Liker un produit
+      description: Anonyme autorisÃ©. IncrÃ©ment atomique ; limitation de dÃ©bit recommandÃ©e.
+      security: []
+      parameters:
+      - *id003
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '204':
+          description: Like enregistrÃ©, sans corps
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - P0 - Produits
+      operationId: unlikeProduct
+      summary: Retirer un like
+      description: Anonyme autorisÃ©. likesCount ne descend jamais sous 0.
+      security: []
+      parameters:
+      - *id003
+      responses:
+        '204':
+          description: Like retirÃ©, sans corps
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/looks:
+    get:
+      tags:
+      - P0 - Lookbook
+      operationId: listLooks
+      summary: Lister les looks
+      description: Ordre croissant de number (chaÃ®ne qui conserve les zÃ©ros initiaux).
+      security: []
+      responses:
+        '200':
+          description: Tableau de looks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LookResponse'
+    post:
+      tags:
+      - P0 - Lookbook
+      operationId: createLook
+      summary: CrÃ©er un look (ADMIN)
+      security: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LookRequest'
+      responses:
+        '201':
+          description: Look crÃ©Ã©
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/looks/{id}:
+    get:
+      tags:
+      - P0 - Lookbook
+      operationId: getLookById
+      summary: Lire un look
+      security: []
+      parameters:
+      - *id003
+      responses:
+        '200':
+          description: Look trouvÃ©
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - P0 - Lookbook
+      operationId: updateLook
+      summary: Modifier un look (ADMIN)
+      security: *id002
+      parameters:
+      - *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LookRequest'
+      responses:
+        '200':
+          description: Look modifiÃ©
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookResponse'
+        '400': *id004
+        '401': *id005
+        '403': *id006
+        '404': *id007
+    delete:
+      tags:
+      - P0 - Lookbook
+      operationId: deleteLook
+      summary: Supprimer un look (ADMIN)
+      security: *id002
+      parameters:
+      - *id003
+      responses:
+        '204':
+          description: Look supprimÃ©, sans corps
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/upload:
+    post:
+      tags:
+      - P0 - Upload
+      operationId: uploadImage
+      summary: Uploader une image (ADMIN)
+      description: JPEG/PNG/WebP â‰¤ 5 Mo ; vÃ©rifier extension, MIME et signature. Nom gÃ©nÃ©rÃ© UUID. URL
+        absolue dans la rÃ©ponse.
+      security: *id002
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              - target
+              properties:
+                file:
+                  type: string
+                  format: binary
+                target:
+                  type: string
+                  enum:
+                  - hero
+                  - products
+                  - lookbook
+      responses:
+        '200':
+          description: Image enregistrÃ©e
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+  /api/hero-slides:
+    get:
+      tags:
+      - P1 - Hero
+      operationId: listHeroSlides
+      summary: Lister les images du carrousel [P1]
+      security: []
+      responses:
+        '200':
+          description: Liste des slides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HeroSlide'
+    post:
+      tags:
+      - P1 - Hero
+      operationId: createHeroSlide
+      summary: CrÃ©er une slide (ADMIN) [P1]
+      security: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeroSlideRequest'
+      responses:
+        '201':
+          description: Slide crÃ©Ã©e
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroSlide'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/hero-slides/{id}:
+    put:
+      tags:
+      - P1 - Hero
+      operationId: updateHeroSlide
+      summary: Modifier une slide (ADMIN) [P1]
+      security: *id002
+      parameters:
+      - &id008
+        name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeroSlideRequest'
+      responses:
+        '200':
+          description: Slide modifiÃ©e
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroSlide'
+        '400': *id004
+        '401': *id005
+        '403': *id006
+        '404': *id007
+    delete:
+      tags:
+      - P1 - Hero
+      operationId: deleteHeroSlide
+      summary: Supprimer une slide (ADMIN) [P1]
+      security: *id002
+      parameters:
+      - *id008
+      responses:
+        '204':
+          description: Slide supprimÃ©e
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/orders:
+    post:
+      tags:
+      - P2 - Commandes
+      operationId: createOrder
+      summary: Enregistrer une commande [P2]
+      description: Proposition non branchÃ©e actuellement. Recalculer prix, remise, livraison et total
+        depuis la base.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+      responses:
+        '201':
+          description: Commande crÃ©Ã©e
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCreatedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags:
+      - P2 - Commandes
+      operationId: listOrders
+      summary: Lister les commandes (ADMIN) [P2]
+      security: *id002
+      responses:
+        '200':
+          description: Liste des commandes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderCreatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/orders/{id}:
+    get:
+      tags:
+      - P2 - Commandes
+      operationId: getOrderById
+      summary: Lire une commande (ADMIN) [P2]
+      security: *id002
+      parameters:
+      - *id003
+      responses:
+        '200':
+          description: Commande trouvÃ©e
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCreatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/orders/{id}/status:
+    put:
+      tags:
+      - P2 - Commandes
+      operationId: updateOrderStatus
+      summary: Changer le statut de commande (ADMIN) [P2]
+      security: *id002
+      parameters:
+      - *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusRequest'
+      responses:
+        '200':
+          description: Statut modifiÃ©
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCreatedResponse'
+        '400': *id004
+        '401': *id005
+        '403': *id006
+        '404': *id007
+  /api/newsletter:
+    post:
+      tags:
+      - P2 - Newsletter
+      operationId: subscribeNewsletter
+      summary: Inscrire Ã  la newsletter [P2]
+      description: 'DÃ©doublonner par email. RÃ©ponse Ã  une nouvelle inscription : 201.'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsletterRequest'
+      responses:
+        '201':
+          description: Abonnement enregistrÃ©
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags:
+      - P2 - Newsletter
+      operationId: listNewsletterSubscribers
+      summary: Lister les inscrits (ADMIN) [P2]
+      security: *id002
+      responses:
+        '200':
+          description: Inscrits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NewsletterSubscriber'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/promo/validate:
+    post:
+      tags:
+      - P2 - ParamÃ¨tres
+      operationId: validatePromo
+      summary: Valider un code de rÃ©duction [P2]
+      description: 'Exemples existants cÃ´tÃ© React : CKENNEDY10 = 10%, WINTER25 = 25%.'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoRequest'
+      responses:
+        '200':
+          description: RÃ©sultat de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoValidationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/settings:
+    get:
+      tags:
+      - P2 - ParamÃ¨tres
+      operationId: getPublicSettings
+      summary: Lire paramÃ¨tres publics [P2]
+      description: 'Valeurs React actuelles : shippingFee=2000, freeShippingThreshold=90000, whatsappNumber=237696611623.'
+      security: []
+      responses:
+        '200':
+          description: ParamÃ¨tres boutique
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT role ADMIN ou CLIENT ; sur route ADMIN, vÃ©rifier ROLE_ADMIN cÃ´tÃ© backend.
+  schemas:
+    ApiError:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
+          example: Erreur comprÃ©hensible en franÃ§ais.
+        field:
+          type: string
+          example: price
+      additionalProperties: false
+    LoginRequest:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    RegisterRequest:
+      type: object
+      required:
+      - name
+      - email
+      - password
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 6
+      description: Toute propriÃ©tÃ© role envoyÃ©e par un client est ignorÃ©e ; compte crÃ©Ã© avec role CLIENT.
+    AuthResponse:
+      type: object
+      required:
+      - token
+      - email
+      - name
+      - role
+      properties:
+        token:
+          type: string
+          description: JWT signÃ©
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum:
+          - ADMIN
+          - CLIENT
+    ProductImages:
+      type: object
+      required:
+      - primary
+      - cartThumbnail
+      properties:
+        primary:
+          type: string
+          format: uri
+        secondary:
+          type: string
+          format: uri
+          nullable: true
+        detail:
+          type: string
+          format: uri
+          nullable: true
+        cartThumbnail:
+          type: string
+          format: uri
+    ProductColor:
+      type: object
+      required:
+      - name
+      - hex
+      properties:
+        name:
+          type: string
+        hex:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+    ProductResponse:
+      type: object
+      required:
+      - id
+      - name
+      - category
+      - price
+      - images
+      - sizes
+      - colors
+      - inStock
+      - isPublished
+      - createdAt
+      - updatedAt
+      properties:
+        id:
+          type: string
+          readOnly: true
+          example: ckennedy-cargo-pant
+        name: &id009
+          type: string
+          minLength: 1
+          example: Pantalon Cargo
+        subtitle: &id010
+          type: string
+          default: ''
+        category: &id011
+          type: string
+          enum:
+          - classique
+          - urbain
+          - accessories
+        price: &id012
+          type: integer
+          format: int64
+          minimum: 0
+          description: Prix entier en FCFA ; seule source de vÃ©ritÃ©.
+          example: 69600
+        priceFcfa:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Alias de sortie facultatif ; ignorÃ© en entrÃ©e.
+          deprecated: true
+        season: &id013
+          type: string
+          default: ''
+        badge: &id014
+          type: string
+          default: ''
+        images: &id015
+          $ref: '#/components/schemas/ProductImages'
+        sizes: &id016
+          type: array
+          items:
+            type: string
+          default: []
+        colors: &id017
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductColor'
+          default: []
+        description: &id018
+          type: string
+          default: ''
+        specs: &id023
+          type: array
+          items:
+            type: string
+          default: []
+          deprecated: true
+        inStock: &id019
+          type: boolean
+          default: true
+        isPublished: &id020
+          type: boolean
+          default: true
+        likesCount:
+          type: integer
+          format: int64
+          minimum: 0
+          readOnly: true
+          default: 0
+        rating: &id021
+          type: number
+          default: 0
+          deprecated: true
+        reviewsCount: &id022
+          type: integer
+          default: 0
+          deprecated: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+    ProductCreateRequest:
+      type: object
+      required:
+      - name
+      - category
+      - price
+      - images
+      properties:
+        name: *id009
+        subtitle: *id010
+        category: *id011
+        price: *id012
+        season: *id013
+        badge: *id014
+        images: *id015
+        sizes: *id016
+        colors: *id017
+        description: *id018
+        inStock: *id019
+        isPublished: *id020
+        priceFcfa:
+          type: integer
+          deprecated: true
+          description: Accepter et ignorer.
+        priceUsd:
+          type: number
+          deprecated: true
+          description: Accepter et ignorer.
+        priceEur:
+          type: number
+          deprecated: true
+          description: Accepter et ignorer.
+        rating: *id021
+        reviewsCount: *id022
+        specs: *id023
+      additionalProperties: true
+    ProductUpdateRequest:
+      type: object
+      description: PUT complet OU partiel (absence = valeur conservÃ©e). id Ã©ventuel du corps ignorÃ©. Le
+        backend valide la ressource finale.
+      properties:
+        name: *id009
+        subtitle: *id010
+        category: *id011
+        price: *id012
+        season: *id013
+        badge: *id014
+        images: *id015
+        sizes: *id016
+        colors: *id017
+        description: *id018
+        inStock: *id019
+        isPublished: *id020
+        id:
+          type: string
+          description: AcceptÃ© mais ignorÃ© ; URL fait autoritÃ©.
+        priceFcfa:
+          type: integer
+          deprecated: true
+          description: AcceptÃ© et ignorÃ©.
+        priceUsd:
+          type: number
+          deprecated: true
+          description: AcceptÃ© et ignorÃ©.
+        priceEur:
+          type: number
+          deprecated: true
+          description: AcceptÃ© et ignorÃ©.
+        rating: *id021
+        reviewsCount: *id022
+        specs: *id023
+      additionalProperties: true
+    LookResponse:
+      type: object
+      required:
+      - id
+      - number
+      - name
+      - includedProductIds
+      properties:
+        id:
+          type: string
+          readOnly: true
+          example: look-01
+        number: &id024
+          type: string
+          example: '01'
+          description: Conserver le zÃ©ro initial.
+        name: &id025
+          type: string
+        subtitle: &id026
+          type: string
+        date: &id027
+          type: string
+          example: 12/08/2024
+          description: Date texte affichÃ©e telle quelle (jj/MM/aaaa).
+        deliveryTag: &id028
+          type: string
+        badge: &id029
+          type: string
+        heroImage: &id030
+          type: string
+          format: uri
+        topLeftTitle: &id031
+          type: string
+        topLeftSubtitle: &id032
+          type: string
+        topRightTitle: &id033
+          type: string
+        topRightSubtitle: &id034
+          type: string
+        bottomLeftTitle: &id035
+          type: string
+        bottomLeftSubtitle: &id036
+          type: string
+        bottomRightTitle: &id037
+          type: string
+        bottomRightSubtitle: &id038
+          type: string
+        includedProductIds: &id039
+          type: array
+          items:
+            type: string
+          default: []
+    LookRequest:
+      type: object
+      required:
+      - number
+      - name
+      properties:
+        number: *id024
+        name: *id025
+        subtitle: *id026
+        date: *id027
+        deliveryTag: *id028
+        badge: *id029
+        heroImage: *id030
+        topLeftTitle: *id031
+        topLeftSubtitle: *id032
+        topRightTitle: *id033
+        topRightSubtitle: *id034
+        bottomLeftTitle: *id035
+        bottomLeftSubtitle: *id036
+        bottomRightTitle: *id037
+        bottomRightSubtitle: *id038
+        includedProductIds: *id039
+      description: Renvoyer le format complet ; id serveur gÃ©nÃ©rÃ© Ã  la crÃ©ation. Identifiants de produits
+        inconnus -> 400.
+    UploadResponse:
+      type: object
+      required:
+      - url
+      - filename
+      - size
+      properties:
+        url:
+          type: string
+          format: uri
+          example: https://api.domaine.com/uploads/products/9f3a.jpg
+        filename:
+          type: string
+          example: 9f3a.jpg
+        size:
+          type: integer
+          format: int64
+          example: 183422
+    HeroSlide:
+      type: object
+      required:
+      - id
+      - img
+      - label
+      - tag
+      - order
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        img: &id040
+          type: string
+          format: uri
+        label: &id041
+          type: string
+        tag: &id042
+          type: string
+        order: &id043
+          type: integer
+          format: int32
+    HeroSlideRequest:
+      type: object
+      required:
+      - img
+      - label
+      - tag
+      - order
+      properties:
+        img: *id040
+        label: *id041
+        tag: *id042
+        order: *id043
+    OrderCustomer:
+      type: object
+      required:
+      - name
+      - phone
+      - city
+      - address
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+    OrderItem:
+      type: object
+      required:
+      - productId
+      - quantity
+      properties:
+        productId:
+          type: string
+        size:
+          type: string
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        quantity:
+          type: integer
+          minimum: 1
+    OrderCreateRequest:
+      type: object
+      required:
+      - customer
+      - items
+      properties:
+        customer:
+          $ref: '#/components/schemas/OrderCustomer'
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        promoCode:
+          type: string
+          nullable: true
+      description: Tous les montants sont recalculÃ©s depuis les prix produits en base.
+    OrderStatus:
+      type: string
+      enum:
+      - NEW
+      - CONFIRMED
+      - SHIPPED
+      - DELIVERED
+      - CANCELLED
+    OrderCreatedResponse:
+      type: object
+      required:
+      - id
+      - reference
+      - status
+      properties:
+        id:
+          type: string
+        reference:
+          type: string
+          example: CKENNEDY-123456
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+    OrderStatusRequest:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+    NewsletterRequest:
+      type: object
+      required:
+      - email
+      properties:
+        email:
+          type: string
+          format: email
+    NewsletterSubscriber:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+    PromoRequest:
+      type: object
+      required:
+      - code
+      properties:
+        code:
+          type: string
+    PromoValidationResponse:
+      type: object
+      required:
+      - valid
+      - percent
+      properties:
+        valid:
+          type: boolean
+        percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+    SettingsResponse:
+      type: object
+      required:
+      - shippingFee
+      - freeShippingThreshold
+      - whatsappNumber
+      properties:
+        shippingFee:
+          type: integer
+          format: int64
+          example: 2000
+        freeShippingThreshold:
+          type: integer
+          format: int64
+          example: 90000
+        whatsappNumber:
+          type: string
+          example: '237696611623'
+  responses:
+    BadRequest:
+      description: EntrÃ©e ou identifiants invalides
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: JWT absent, invalide ou expirÃ© sur ressource protÃ©gÃ©e
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: RÃ´le insuffisant
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Ressource non trouvÃ©e
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Conflit (email dÃ©jÃ  existant)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    PayloadTooLarge:
+      description: Fichier trop volumineux
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
