@@ -1,4 +1,4 @@
-﻿openapi: 3.0.3
+openapi: 3.0.3
 info:
   title: C'Kennedy - Contrat REST backend Spring Boot
   version: 1.0.0
@@ -911,39 +911,86 @@ components:
       additionalProperties: true
     ProductUpdateRequest:
       type: object
-      description: PUT complet OU partiel (absence = valeur conservÃ©e). id Ã©ventuel du corps ignorÃ©. Le
-        backend valide la ressource finale.
+      description: PUT complet OU partiel (absence = valeur conservée). id éventuel du corps ignoré.
       properties:
-        name: *id009
-        subtitle: *id010
-        category: *id011
-        price: *id012
-        season: *id013
-        badge: *id014
-        images: *id015
-        sizes: *id016
-        colors: *id017
-        description: *id018
-        inStock: *id019
-        isPublished: *id020
+
+        name:
+          type: string
+          minLength: 1
+
+        subtitle:
+          type: string
+
+        category:
+          type: string
+          enum:
+            - classique
+            - urbain
+            - accessories
+
+        price:
+          type: integer
+          format: int64
+          minimum: 0
+
+        season:
+          type: string
+
+        badge:
+          type: string
+
+        images:
+          $ref: '#/components/schemas/ProductImages'
+
+        sizes:
+          type: array
+          items:
+            type: string
+
+        colors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductColor'
+
+        description:
+          type: string
+
+        inStock:
+          type: boolean
+
+        isPublished:
+          type: boolean
+
         id:
           type: string
-          description: AcceptÃ© mais ignorÃ© ; URL fait autoritÃ©.
+          description: Accepté mais ignoré ; URL fait autorité.
+
         priceFcfa:
           type: integer
           deprecated: true
-          description: AcceptÃ© et ignorÃ©.
+          description: Accepté et ignoré.
+
         priceUsd:
           type: number
           deprecated: true
-          description: AcceptÃ© et ignorÃ©.
+          description: Accepté et ignoré.
+
         priceEur:
           type: number
           deprecated: true
-          description: AcceptÃ© et ignorÃ©.
-        rating: *id021
-        reviewsCount: *id022
-        specs: *id023
+          description: Accepté et ignoré.
+
+        rating:
+          type: number
+
+        reviewsCount:
+          type: integer
+
+        specs:
+          type: array
+          items:
+            type: string
+
       additionalProperties: true
     LookResponse:
       type: object
