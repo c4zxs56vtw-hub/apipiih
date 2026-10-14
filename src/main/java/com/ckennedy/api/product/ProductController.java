@@ -70,6 +70,18 @@ public class ProductController {
         );
     }
 
+    @GetMapping("/trending")
+    public ResponseEntity<List<ProductResponse>> getTrending(
+            @RequestParam(
+                    defaultValue = "4"
+            ) int limit
+    ) {
+
+        return ResponseEntity.ok(
+                productService.findTrending(limit)
+        );
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> findById(
             @PathVariable String id,
@@ -122,5 +134,35 @@ public class ProductController {
                 productService.update(id, request);
 
         return ResponseEntity.ok(product);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(
+            @PathVariable String id
+    ) {
+        productService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/like")
+    public ResponseEntity<Void> like(
+            @PathVariable String id
+    ) {
+        productService.like(id);
+
+        return ResponseEntity
+                .noContent()
+                .build();
+    }
+
+    @DeleteMapping("/{id}/like")
+    public ResponseEntity<Void> unlike(
+            @PathVariable String id
+    ) {
+        productService.unlike(id);
+
+        return ResponseEntity
+                .noContent()
+                .build();
     }
 }
