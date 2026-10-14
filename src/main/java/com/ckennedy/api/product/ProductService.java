@@ -1,9 +1,13 @@
 package com.ckennedy.api.product;
 
+import com.ckennedy.api.exception.InvalidLimitException;
 import com.ckennedy.api.exception.ProductNotFoundException;
 import com.ckennedy.api.generated.model.ProductCreateRequest;
 import com.ckennedy.api.generated.model.ProductResponse;
 import com.ckennedy.api.generated.model.ProductUpdateRequest;
+import com.ckennedy.api.look.LookEntity;
+import com.ckennedy.api.look.LookRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,13 +19,16 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
+    private final LookRepository lookRepository;
 
     public ProductService(
             ProductRepository productRepository,
-            ProductMapper productMapper
+            ProductMapper productMapper,
+            LookRepository lookRepository
     ) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
+        this.lookRepository = lookRepository;
     }
 
 
@@ -139,5 +146,70 @@ public class ProductService {
                 productRepository.saveAndFlush(product);
 
         return productMapper.toResponse(updatedProduct);
+    }
+
+    @Transactional
+    public void delete(String id) {
+
+        ProductEntity product = productRepository
+                .findById(id)
+                .orElseThrow(ProductNotFoundException::new);
+
+        List<LookEntity> looks =
+                lookRepository.findAllContainingProduct(id);
+
+        for (LookEntity look : looks) {
+
+            look.getIncludedProductIds()
+                    .removeIf(productId ->
+                            productId.equals(id)
+                    );
+        }
+
+        productRepository.delete(product);
+    }
+
+    @Transactional
+    public void like(String id) {
+
+        int updatedRows =
+                productRepository.incrementLikes(id);
+
+        if (updatedRows == 0) {
+            throw new ProductNotFoundException();
+        }
+    }
+
+    @Transactional
+    public void unlike(String id) {
+
+        int updatedRows =
+                productRepository.decrementLikes(id);
+
+        if (updatedRows == 0) {
+            throw new ProductNotFoundException();
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> findTrending(
+            int limit
+    ) {
+
+        if (limit < 1) {
+            throw new InvalidLimitException();
+        }
+
+        var pageable =
+                PageRequest.of(0, limit);
+
+        List<ProductEntity> products =
+                productRepository
+                        .findByIsPublishedTrueOrderByLikesCountDesc(
+                                pageable
+                        );
+
+        return productMapper
+                .toResponseList(products);
     }
 }

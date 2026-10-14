@@ -78,20 +78,92 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth ->
                         auth
+                                // AUTH
                                 .requestMatchers(
                                         "/api/auth/register",
                                         "/api/auth/login"
                                 )
                                 .permitAll()
 
+                                // TRENDING PUBLIC
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/products/trending"
+                                )
+                                .permitAll()
+
+                                // LIKE / UNLIKE PUBLICS
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/products/*/like"
+                                )
+                                .permitAll()
+
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
+                                        "/api/products/*/like"
+                                )
+                                .permitAll()
+
+                                // LOOKS PUBLICS
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/looks/**"
+                                )
+                                .permitAll()
+
+                                // UPLOADS PUBLICS
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/uploads/**"
+                                )
+                                .permitAll()
+
+                                // CREATION LOOK ADMIN
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/looks"
+                                )
+                                .hasRole("ADMIN")
+
+                                // MODIFICATION LOOK ADMIN
+                                .requestMatchers(
+                                        HttpMethod.PUT,
+                                        "/api/looks/**"
+                                )
+                                .hasRole("ADMIN")
+
+                                // SUPPRESSION LOOK ADMIN
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
+                                        "/api/looks/**"
+                                )
+                                .hasRole("ADMIN")
+
+                                // UPLOAD ADMIN
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/upload"
+                                )
+                                .hasRole("ADMIN")
+
+                                // CREATION PRODUIT ADMIN
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/api/products"
                                 )
                                 .hasRole("ADMIN")
 
+                                // MODIFICATION PRODUIT ADMIN
                                 .requestMatchers(
                                         HttpMethod.PUT,
+                                        "/api/products/**"
+                                )
+                                .hasRole("ADMIN")
+
+                                // SUPPRESSION PRODUIT ADMIN
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
                                         "/api/products/**"
                                 )
                                 .hasRole("ADMIN")

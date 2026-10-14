@@ -7,6 +7,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -115,6 +116,78 @@ public class ApiExceptionHandler {
 
         return ResponseEntity
                 .badRequest()
+                .body(error);
+    }
+
+    @ExceptionHandler(InvalidLimitException.class)
+    public ResponseEntity<ApiError> handleInvalidLimit(
+            InvalidLimitException exception
+    ) {
+
+        ApiError error = new ApiError();
+
+        error.setMessage(exception.getMessage());
+        error.setField("limit");
+
+        return ResponseEntity
+                .badRequest()
+                .body(error);
+    }
+
+    @ExceptionHandler(InvalidLookProductsException.class)
+    public ResponseEntity<ApiError> handleInvalidLookProducts(
+            InvalidLookProductsException exception
+    ) {
+
+        ApiError error = new ApiError();
+
+        error.setMessage(exception.getMessage());
+        error.setField("includedProductIds");
+
+        return ResponseEntity
+                .badRequest()
+                .body(error);
+    }
+
+    @ExceptionHandler(LookNotFoundException.class)
+    public ResponseEntity<ApiError> handleLookNotFound(
+            LookNotFoundException exception
+    ) {
+
+        ApiError error = new ApiError();
+        error.setMessage(exception.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(error);
+    }
+
+    @ExceptionHandler(InvalidUploadException.class)
+    public ResponseEntity<ApiError> handleInvalidUpload(
+            InvalidUploadException exception
+    ) {
+
+        ApiError error = new ApiError();
+        error.setMessage(exception.getMessage());
+
+        return ResponseEntity
+                .badRequest()
+                .body(error);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleFileTooLarge(
+            MaxUploadSizeExceededException exception
+    ) {
+
+        ApiError error = new ApiError();
+
+        error.setMessage(
+                "Le fichier dépasse la taille maximale de 5 Mo."
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(error);
     }
 }
