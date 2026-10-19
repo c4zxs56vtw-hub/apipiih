@@ -28,6 +28,7 @@ public class LookEntity {
 
     private String badge;
 
+    @Column(name = "hero_image", columnDefinition = "TEXT")
     private String heroImage;
 
     private String topLeftTitle;

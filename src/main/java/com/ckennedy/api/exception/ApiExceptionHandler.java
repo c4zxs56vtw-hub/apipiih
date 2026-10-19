@@ -86,7 +86,7 @@ public class ApiExceptionHandler {
         ApiError error = new ApiError();
 
         error.setMessage(
-                "Le corps de la requête est invalide."
+                "Le corps de la requête est invalide: " + (exception.getCause() != null ? exception.getCause().getMessage() : exception.getMessage())
         );
 
         return ResponseEntity

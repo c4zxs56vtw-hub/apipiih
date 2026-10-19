@@ -6,16 +6,16 @@ import jakarta.persistence.Embeddable;
 @Embeddable
 public class ProductImagesEntity {
 
-    @Column(name = "image_primary", nullable = false)
+    @Column(name = "image_primary", nullable = false, columnDefinition = "TEXT")
     private String primary;
 
-    @Column(name = "image_secondary")
+    @Column(name = "image_secondary", columnDefinition = "TEXT")
     private String secondary;
 
-    @Column(name = "image_detail")
+    @Column(name = "image_detail", columnDefinition = "TEXT")
     private String detail;
 
-    @Column(name = "cart_thumbnail", nullable = false)
+    @Column(name = "cart_thumbnail", nullable = false, columnDefinition = "TEXT")
     private String cartThumbnail;
 
     public ProductImagesEntity() {
